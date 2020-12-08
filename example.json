@@ -1,0 +1,9 @@
+{
+  "mychannel": {
+    "org/myint": 1,
+    "org/mydouble": 2.5,
+    "org/mystring": "hello my friend",
+    "org/mybool": true,
+    "org/mylist": [ 2, 3 ]
+  }
+}

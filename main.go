@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -11,8 +12,6 @@ import (
 	"os/exec"
 	"strings"
 )
-
-const xfconfBin = "xfconf-query"
 
 func main() {
 	if err := run(); err != nil {
@@ -25,10 +24,6 @@ func run() error {
 	in := flag.String("file", "", "json config file")
 	bash := flag.Bool("bash", false, "generate a bash script")
 	flag.Parse()
-
-	if !*bash && !commandExists(xfconfBin) {
-		return fmt.Errorf("%s is not found on your system", xfconfBin)
-	}
 
 	if *in == "" {
 		return errors.New("file parameter not provided")
@@ -45,7 +40,8 @@ func run() error {
 	}
 
 	if *bash {
-		return conf.toBash()
+		fmt.Println(conf.toBash())
+		return nil
 	}
 
 	return conf.apply()
@@ -67,7 +63,7 @@ func parseConfig(r io.Reader) (*config, error) {
 	return &conf, nil
 }
 
-func (c *config) toBash() error {
+func (c *config) toBash() string {
 	var b strings.Builder
 
 	if len(*c) > 0 {
@@ -76,38 +72,67 @@ func (c *config) toBash() error {
 
 	for channel, props := range *c {
 		for prop, v := range props {
-			set := fmt.Sprintf("--type %q --set \"%v\"", xfconfType(v), v)
-
-			// if array, add multiple times --type and --set for each value
-			arr, isArr := v.([]interface{})
-			if isArr {
-				var setb strings.Builder
-				for _, vv := range arr {
-					fmt.Fprintf(&setb, "--type %q --set \"%v\" ", xfconfType(vv), vv)
-				}
-				set = strings.TrimSpace(setb.String())
-			}
-
-			// make sure property starts with slash
-			prop = fmt.Sprintf("/%s", strings.Trim(prop, "/"))
-
-			fmt.Fprintf(&b, "\n%s --channel %q --property %q --create %s",
-				xfconfBin, channel, prop, set)
+			args := args(channel, prop, v, true)
+			fmt.Fprintf(&b, "\nxfconf-query %s", strings.Join(args, " "))
 		}
 	}
 
-	fmt.Println(b.String())
-
-	return nil
+	return b.String()
 }
 
 func (c *config) apply() error {
+	xfconfBin, err := exec.LookPath("xfconf-query")
+	if err != nil {
+		return fmt.Errorf("%s is not found on your system", xfconfBin)
+	}
+
+	for channel, props := range *c {
+		for prop, v := range props {
+			args := args(channel, prop, v, false)
+			cmd := exec.Command(xfconfBin, args...)
+
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()
+			if err != nil {
+				return errors.New(stderr.String())
+			}
+		}
+	}
+
 	return nil
 }
 
-func commandExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
-	return err == nil
+func args(channel string, prop string, v interface{}, escape bool) []string {
+	format := func(s string) string {
+		if escape {
+			return fmt.Sprintf("%q", s)
+		}
+		return s
+	}
+
+	// make sure property starts with slash
+	prop = fmt.Sprintf("/%s", strings.Trim(prop, "/"))
+
+	var args []string
+	args = append(args, "--channel", format(channel))
+	args = append(args, "--property", format(prop))
+	args = append(args, "--create")
+
+	// if array, add --type and --set flags multiple times
+	arr, isArr := v.([]interface{})
+	if isArr {
+		for _, vv := range arr {
+			args = append(args, "--type", format(xfconfType(vv)))
+			args = append(args, "--set", format(fmt.Sprintf("%v", vv)))
+		}
+	} else {
+		args = append(args, "--type", format(xfconfType(v)))
+		args = append(args, "--set", format(fmt.Sprintf("%v", v)))
+	}
+
+	return args
 }
 
 // xfconfType returns a string containing the

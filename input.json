@@ -1,9 +1,0 @@
-{
-  "xfce4-panel": {
-    "org/int": 1,
-    "org/double": 2.5,
-    "org/string": "hello",
-    "org/bool": true,
-    "org/list": [ 2, 3 ]
-  }
-}
