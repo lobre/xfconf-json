@@ -1,6 +1,6 @@
 # xfconf-json
 
-An `xfconf-query` wrapper to apply configurations from a json file.
+An `xfconf-query` wrapper to apply configurations from a JSON file.
 
 His big brother dconf has a way to import configurations from a file using:
 
@@ -16,7 +16,7 @@ That's why I created this simple `xfconf-query` wrapper that will call the corre
 
 ## Installation
 
-This wrapper is developed in Go, and is not distributed to any package manager as for now. So you need Go installed to use:
+This wrapper is developed in Go, and is not distributed to any package manager as for now. So you need Go installed and use:
 
 ```
 go get -u github.com/lobre/xfconf-json
@@ -41,6 +41,8 @@ So there are basically two modes depending on whether you use the `-bash` flag o
 Here is a JSON file that you can take as example for the structure:
 
 ```
+$ cat test.json
+
 {
   "displays": {
     "/Default/eDP-1/Active": true,
