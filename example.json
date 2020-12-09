@@ -5,5 +5,8 @@
     "org/mystring": "hello my friend",
     "org/mybool": true,
     "org/mylist": [ 2, 3 ]
+  },
+  "mysecondchannel": {
+    "toto": 5
   }
 }

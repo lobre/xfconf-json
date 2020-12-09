@@ -22,6 +22,7 @@ func main() {
 
 func run() error {
 	in := flag.String("file", "", "json config file")
+	bin := flag.String("bin", "xfconf-query", "xfconf-query binary")
 	bash := flag.Bool("bash", false, "generate a bash script")
 	flag.Parse()
 
@@ -40,16 +41,17 @@ func run() error {
 	}
 
 	if *bash {
-		fmt.Println(conf.toBash())
+		fmt.Println(conf.toBash(*bin))
 		return nil
 	}
 
-	return conf.apply()
+	return conf.apply(*bin)
 }
 
 type channel map[string]interface{}
 type config map[string]channel
 
+// parseConfig creates a config from a json input.
 func parseConfig(r io.Reader) (*config, error) {
 	var conf config
 
@@ -63,7 +65,12 @@ func parseConfig(r io.Reader) (*config, error) {
 	return &conf, nil
 }
 
-func (c *config) toBash() string {
+// toBash generates a bash script containing all the calls
+// to xfconf-query corresponding to what was described in
+// the original json file. It can be used if one does not
+// want to directly call apply(), or if the generation should
+// happen on a different machine without xfconf-query installed.
+func (c *config) toBash(bin string) string {
 	var b strings.Builder
 
 	if len(*c) > 0 {
@@ -71,19 +78,23 @@ func (c *config) toBash() string {
 	}
 
 	for channel, props := range *c {
+		fmt.Fprintf(&b, "\n\n# channel %s", channel)
+
 		for prop, v := range props {
 			args := args(channel, prop, v, true)
-			fmt.Fprintf(&b, "\nxfconf-query %s", strings.Join(args, " "))
+			fmt.Fprintf(&b, "\n%s %s", bin, strings.Join(args, " "))
 		}
 	}
 
 	return b.String()
 }
 
-func (c *config) apply() error {
-	xfconfBin, err := exec.LookPath("xfconf-query")
+// apply wraps command calls to xfconf-query using os/exec and
+// will apply the configurations to the current system.
+func (c *config) apply(bin string) error {
+	xfconfBin, err := exec.LookPath(bin)
 	if err != nil {
-		return fmt.Errorf("%s is not found on your system", xfconfBin)
+		return fmt.Errorf("%s is not found on your system", bin)
 	}
 
 	for channel, props := range *c {
@@ -104,6 +115,8 @@ func (c *config) apply() error {
 	return nil
 }
 
+// args generates the correct list of arguments that will be used
+// by the xfconf-query tool.
 func args(channel string, prop string, v interface{}, escape bool) []string {
 	format := func(s string) string {
 		if escape {
