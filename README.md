@@ -1,8 +1,8 @@
 # xfconf-json
 
-An `xfconf-query` wrapper to apply configurations from a JSON file.
+An `xfconf-query` wrapper to apply configurations from a JSON file. It helps to configure XFCE from declarative files.
 
-His big brother dconf has a way to import configurations from a file using:
+Xfconf's big brother dconf has a way to import configurations from an INI file using:
 
 ```
 dconf load / < config.ini
