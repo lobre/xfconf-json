@@ -136,6 +136,9 @@ func args(channel string, prop string, v interface{}, escape bool) []string {
 	// if array, add --type and --set flags multiple times
 	arr, isArr := v.([]interface{})
 	if isArr {
+		// force array even if one element
+		args = append(args, "--force-array")
+
 		for _, vv := range arr {
 			args = append(args, "--type", format(xfconfType(vv)))
 			args = append(args, "--set", format(fmt.Sprintf("%v", vv)))
